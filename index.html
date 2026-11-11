@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Simulador «Mi primer cuatrimestre»: armá tu semana con las materias reales de tu carrera y mirá si te alcanza el tiempo. Prototipo para el CIEU 2027.">
+  <meta name="color-scheme" content="light">
+  <title>Mi primer cuatrimestre · CIEU 2027</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700;800&display=swap">
+  <style>
+/* Paleta UPC (plantilla 27b): gris carbón y naranja institucional sobre papel cálido. */
+:root {
+  --ink:#3a3939; --muted:#686565; --paper:#f4f2ed; --card:#ffffff; --line:#d9d5cd; --line-soft:#ebe6dc; --track:#e6e1d7;
+  --orange:#f7a400; --orange-dark:#d78f00; --orange-text:#a86f00; --orange-soft:#ffe2ad; --stone:#ece9e4; --gray:#a6a3a0;
+  --on-dark:#ffffff; --on-dark-muted:#cfcbc6; --dark-line:#5f5c5a;
+  --alert:#a3341f; --alert-soft:#f6dcd5;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:"Open Sans",Arial,Helvetica,sans-serif; line-height:1.5; }
+main { width:min(1080px,calc(100% - 32px)); margin:0 auto; padding:14px 0 48px; }
+a { color:inherit; }
+:focus-visible { outline:3px solid var(--orange); outline-offset:2px; }
+
+.topNav { height:58px; display:flex; align-items:center; justify-content:space-between; gap:16px; font-size:13px; color:var(--muted); }
+.topNav img { display:block; width:190px; height:auto; }
+
+/* portada */
+.hero { padding:44px; border-radius:28px; background:var(--ink); color:var(--on-dark); position:relative; overflow:hidden; }
+.hero::after { content:""; position:absolute; width:300px; height:300px; right:-90px; top:-120px; border-radius:50%; border:60px solid var(--orange); }
+.hero > * { position:relative; z-index:1; }
+.eyebrow,.sectionLabel { text-transform:uppercase; letter-spacing:.13em; font-size:12px; font-weight:800; }
+.eyebrow { color:var(--orange); margin-bottom:14px; }
+h1 { margin:0; max-width:700px; font-size:clamp(40px,6.4vw,74px); line-height:.96; letter-spacing:-.055em; }
+.lede { max-width:620px; margin:22px 0 0; font-size:18px; color:var(--on-dark-muted); }
+
+/* carreras */
+.careers { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:14px 0 52px; }
+.career { text-align:left; font:inherit; color:inherit; cursor:pointer; border:1px solid var(--line); background:var(--card); border-radius:20px; padding:18px 20px; }
+.career b { display:block; font-size:17px; letter-spacing:-.02em; }
+.career small { color:var(--muted); font-size:13px; }
+.career[aria-pressed="true"] { background:var(--orange); border-color:var(--orange); }
+.career[aria-pressed="true"] small { color:#241c18; }
+
+.sectionLabel { color:var(--orange-text); margin-bottom:10px; }
+h2 { margin:0 0 6px; font-size:clamp(28px,3.6vw,42px); line-height:1.05; letter-spacing:-.045em; }
+.intro { color:var(--muted); margin:0 0 22px; max-width:680px; }
+
+.grid { display:grid; grid-template-columns:1.05fr .95fr; gap:14px; align-items:start; }
+.panel { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:28px; }
+.panel h3 { margin:0 0 4px; font-size:20px; letter-spacing:-.03em; }
+.panel .hint { margin:0 0 18px; color:var(--muted); font-size:14px; }
+
+/* tabla de materias */
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800; padding:0 0 8px; border-bottom:2px solid var(--orange); }
+th.n,td.n { text-align:right; white-space:nowrap; padding-left:12px; }
+td { padding:9px 0; border-bottom:1px solid var(--line-soft); }
+tfoot td { font-weight:800; border-bottom:0; padding-top:12px; }
+.source { margin:14px 0 0; font-size:12px; color:var(--muted); }
+
+/* campos */
+.field { padding:16px 0; border-top:1px solid var(--line-soft); }
+.field:first-of-type { border-top:0; padding-top:0; }
+.field label { display:flex; justify-content:space-between; gap:12px; font-weight:700; font-size:15px; }
+.field output { color:var(--orange-text); font-weight:800; white-space:nowrap; }
+.field p { margin:2px 0 10px; color:var(--muted); font-size:13px; }
+input[type=range] { width:100%; accent-color:var(--orange); height:28px; }
+
+/* resultado */
+.result { margin-top:14px; }
+.bar { display:flex; height:38px; border-radius:12px; overflow:hidden; background:var(--track); margin:18px 0 12px; }
+.bar i { display:block; height:100%; transition:width .25s; }
+.s-sleep { background:var(--gray); } .s-career { background:var(--orange); } .s-other { background:var(--ink); } .s-free { background:var(--orange-soft); }
+.legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin:0; padding:0; list-style:none; font-size:13px; color:var(--muted); }
+.legend li { display:flex; align-items:center; gap:7px; }
+.legend i { width:12px; height:12px; border-radius:3px; display:inline-block; }
+.legend b { color:var(--ink); }
+.numbers { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-top:20px; }
+.num { background:var(--stone); border-radius:18px; padding:18px; }
+.num strong { display:block; font-size:40px; line-height:1; letter-spacing:-.05em; }
+.num span { color:var(--muted); font-size:13px; }
+.message { margin-top:14px; border-radius:18px; padding:18px 20px; border-left:6px solid var(--ink); background:var(--stone); }
+.message b { display:block; font-size:16px; margin-bottom:3px; }
+.message p { margin:0; font-size:14px; }
+.message.tight { border-color:var(--orange); background:var(--orange-soft); }
+.message.over { border-color:var(--alert); background:var(--alert-soft); }
+
+.after { margin-top:52px; display:grid; grid-template-columns:repeat(3,1fr); gap:0; border-top:2px solid var(--orange); }
+.after div { padding:16px 18px 0 0; }
+.after div + div { padding-left:18px; border-left:1px solid var(--line); }
+.after b { color:var(--orange-text); }
+.after h3 { margin:4px 0 4px; font-size:15px; }
+.after p { margin:0; font-size:13px; color:var(--muted); }
+
+footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; }
+.reset { font:inherit; font-size:12px; color:var(--muted); background:none; border:1px solid var(--line); border-radius:99px; padding:5px 12px; cursor:pointer; }
+
+@media (max-width:820px) {
+  .grid { grid-template-columns:1fr; }
+  .after { grid-template-columns:1fr; }
+  .after div + div { padding-left:0; border-left:0; border-top:1px solid var(--line-soft); }
+}
+@media (max-width:560px) {
+  .hero { padding:30px 22px; border-radius:22px; }
+  .hero::after { width:200px; height:200px; border-width:40px; right:-80px; top:-90px; }
+  .careers { grid-template-columns:1fr; }
+  .panel { padding:22px 18px; }
+  .topNav img { width:150px; }
+  .topNav span { display:none; }
+}
+@media (prefers-reduced-motion:reduce) { .bar i { transition:none; } }
+  </style>
+</head>
+<body>
+<main>
+  <nav class="topNav" aria-label="Encabezado">
+    <img src="logo-upc.png" alt="Universidad Provincial de Córdoba">
+    <span>CIEU 2027 · Informática y Tecnologías Digitales</span>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">CIEU 2027 · Tu semana</div>
+    <h1>¿Te da la semana para estudiar?</h1>
+    <p class="lede">Elegí tu carrera, contá cómo es tu semana y mirá cuántas horas te quedan libres con las materias reales de tu primer cuatrimestre.</p>
+  </header>
+
+  <section aria-label="Elegí tu carrera" class="careers" id="careers"></section>
+
+  <section aria-labelledby="t-semana">
+    <div class="sectionLabel">Tu primer cuatrimestre</div>
+    <h2 id="t-semana">Armá tu semana</h2>
+    <p class="intro">Movés los controles y el resultado se actualiza solo. Lo que cargás queda en este dispositivo: la página no envía datos a ningún lado.</p>
+
+    <div class="grid">
+      <div class="panel">
+        <h3>Tus materias</h3>
+        <p class="hint" id="careerName"></p>
+        <table>
+          <thead><tr><th>Materia</th><th class="n">Clase</th><th class="n">Estudio</th></tr></thead>
+          <tbody id="subjects"></tbody>
+          <tfoot><tr><td>Total por semana</td><td class="n" id="totClass"></td><td class="n" id="totStudy"></td></tr></tfoot>
+        </table>
+        <p class="source" id="source"></p>
+      </div>
+
+      <div class="panel">
+        <h3>Tu vida real</h3>
+        <p class="hint">Horas por semana, salvo el sueño.</p>
+        <div class="field">
+          <label for="ratio">Estudio por cada hora de clase <output for="ratio" id="o-ratio"></output></label>
+          <p>Como punto de partida se recomienda al menos 1 hora de estudio por cada hora de clase.</p>
+          <input type="range" id="ratio" min="0.5" max="3" step="0.5" value="1">
+        </div>
+        <div class="field">
+          <label for="sleep">Sueño por noche <output for="sleep" id="o-sleep"></output></label>
+          <input type="range" id="sleep" min="5" max="10" step="0.5" value="8">
+        </div>
+        <div class="field">
+          <label for="work">Trabajo <output for="work" id="o-work"></output></label>
+          <p>Por ejemplo, medio día de lunes a viernes son 20 horas.</p>
+          <input type="range" id="work" min="0" max="60" step="1" value="0">
+        </div>
+        <div class="field">
+          <label for="travel">Viaje <output for="travel" id="o-travel"></output></label>
+          <p>A la sede, al trabajo y de vuelta.</p>
+          <input type="range" id="travel" min="0" max="30" step="1" value="0">
+        </div>
+        <div class="field">
+          <label for="other">Otras obligaciones <output for="other" id="o-other"></output></label>
+          <p>Familia, cuidados, tareas de la casa, deporte.</p>
+          <input type="range" id="other" min="0" max="60" step="1" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel result" aria-labelledby="t-res">
+      <h3 id="t-res">Tu semana tiene 168 horas</h3>
+      <div class="bar" id="bar" role="img"></div>
+      <ul class="legend">
+        <li><i class="s-sleep"></i>Sueño <b id="l-sleep"></b></li>
+        <li><i class="s-career"></i>Carrera <b id="l-career"></b></li>
+        <li><i class="s-other"></i>Trabajo, viaje y obligaciones <b id="l-other"></b></li>
+        <li><i class="s-free"></i>Libre <b id="l-free"></b></li>
+      </ul>
+      <div class="numbers">
+        <div class="num"><strong id="freeWeek"></strong><span>horas libres por semana</span></div>
+        <div class="num"><strong id="freeDay"></strong><span>horas libres por día, en promedio</span></div>
+      </div>
+      <div class="message" id="message" role="status" aria-live="polite"><b></b><p></p></div>
+    </div>
+  </section>
+
+  <section class="after" aria-label="Después del simulador">
+    <div><b>01</b><h3>Probá otras opciones</h3><p>Menos viaje, más estudio, otro horario de trabajo. ¿Qué cambia?</p></div>
+    <div><b>02</b><h3>Mirá la materia más pesada</h3><p>¿Cuál te va a pedir más tiempo? Planificá esas horas primero.</p></div>
+    <div><b>03</b><h3>Si no te cierra, consultá</h3><p>Hablá con la coordinación. Si trabajás o tenés personas a cargo, preguntá por el régimen de la RR 132/2023.</p></div>
+  </section>
+
+  <footer>
+    <span>Prototipo de Transversalidad Académica para el CIEU 2027. No es una publicación oficial de la UPC.</span>
+    <button class="reset" id="reset" type="button">Volver a los valores iniciales</button>
+  </footer>
+</main>
+
+<script>
+const CARRERAS = {
+  fs: { nombre: 'Programación Full Stack', titulo: 'Tecnicatura Universitaria en Programación Full Stack', norma: 'RR 479/2024',
+        materias: [['Introducción al Análisis Sistémico',2],['Bases de Datos 1',6],['Emprendedurismo',2],['Alfabetización Digital',2],['Algoritmos 1',6]] },
+  cd: { nombre: 'Ciencia de Datos e IA', titulo: 'Tecnicatura Universitaria en Ciencia de Datos e Inteligencia Artificial', norma: 'RR 477/2024',
+        materias: [['Bases Matemáticas para Innovación Tecnológica 1',5],['Programación 1',4],['Fundamentos de Inteligencia Artificial',4],['Estadística y Ciencia de Datos',4],['Habilidades para la Gestión',2]] },
+  cs: { nombre: 'Ciberseguridad', titulo: 'Tecnicatura Universitaria en Ciberseguridad', norma: 'RR 477/2025',
+        materias: [['Matemática 1',3],['Computación y Sistemas Operativos',4],['Introducción a la Ciberseguridad',3],['Comunicación Profesional',2],['Normas y Estándares de Seguridad',3]] }
+};
+const DEF = { carrera: 'fs', ratio: 1, sleep: 8, work: 0, travel: 0, other: 0 };
+const KEY = 'simulador-cieu-2027';
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n * 10) / 10).toLocaleString('es-AR');
+let st = { ...DEF };
+try { st = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch (e) {}
+if (!CARRERAS[st.carrera]) st.carrera = DEF.carrera;
+
+const careersEl = $('careers');
+for (const [id, c] of Object.entries(CARRERAS)) {
+  const total = c.materias.reduce((a, m) => a + m[1], 0);
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'career'; b.dataset.id = id;
+  b.innerHTML = `<b>${c.nombre}</b><small>${c.materias.length} materias · ${total} h de clase por semana</small>`;
+  b.addEventListener('click', () => { st.carrera = id; render(); });
+  careersEl.appendChild(b);
+}
+for (const k of ['ratio','sleep','work','travel','other']) {
+  $(k).addEventListener('input', e => { st[k] = parseFloat(e.target.value); render(); });
+}
+$('reset').addEventListener('click', () => { st = { ...DEF, carrera: st.carrera }; render(); });
+
+function render() {
+  const c = CARRERAS[st.carrera];
+  for (const b of careersEl.children) b.setAttribute('aria-pressed', b.dataset.id === st.carrera);
+  $('careerName').textContent = c.titulo + ' · horas por semana';
+  $('subjects').innerHTML = c.materias.map(([n, h]) => `<tr><td>${n}</td><td class="n">${h} h</td><td class="n">${fmt(h * st.ratio)} h</td></tr>`).join('');
+  const clase = c.materias.reduce((a, m) => a + m[1], 0);
+  const estudio = clase * st.ratio;
+  $('totClass').textContent = clase + ' h'; $('totStudy').textContent = fmt(estudio) + ' h';
+  $('source').textContent = `Fuente: materias y horas semanales del primer cuatrimestre según el plan de estudios (${c.norma}).`;
+
+  for (const k of ['ratio','sleep','work','travel','other']) $(k).value = st[k];
+  $('o-ratio').textContent = fmt(st.ratio) + ' h';
+  $('o-sleep').textContent = fmt(st.sleep) + ' h';
+  for (const k of ['work','travel','other']) $('o-' + k).textContent = st[k] + ' h';
+
+  const sueno = st.sleep * 7, carrera = clase + estudio, otras = st.work + st.travel + st.other;
+  const libre = 168 - sueno - carrera - otras;
+  const seg = [['s-sleep', sueno], ['s-career', carrera], ['s-other', otras], ['s-free', Math.max(libre, 0)]];
+  const usado = seg.reduce((a, s) => a + s[1], 0);
+  const base = Math.max(168, usado);
+  $('bar').innerHTML = seg.map(([cl, v]) => `<i class="${cl}" style="width:${v / base * 100}%"></i>`).join('');
+  $('bar').setAttribute('aria-label', `Sueño ${fmt(sueno)} horas, carrera ${fmt(carrera)}, trabajo viaje y obligaciones ${fmt(otras)}, libre ${fmt(Math.max(libre,0))}, de 168`);
+  $('l-sleep').textContent = fmt(sueno) + ' h'; $('l-career').textContent = fmt(carrera) + ' h';
+  $('l-other').textContent = fmt(otras) + ' h'; $('l-free').textContent = fmt(Math.max(libre, 0)) + ' h';
+  $('freeWeek').textContent = fmt(libre); $('freeDay').textContent = fmt(libre / 7);
+
+  const m = $('message');
+  let cls = '', t, p;
+  if (libre < 0) { cls = 'over'; t = 'Tu semana no alcanza.'; p = `Te faltan ${fmt(-libre)} horas. Revisá cuántas horas podés dedicarle a la carrera y hablá con la coordinación antes de empezar.`; }
+  else if (libre < 21) { cls = 'tight'; t = 'Tu semana está muy ajustada.'; p = 'Te quedan menos de 3 horas libres por día. Organizate con un horario fijo de estudio y consultá con la coordinación.'; }
+  else { t = 'Tenés margen para cursar.'; p = 'La clave es sostener las horas de estudio todas las semanas, no solo antes de los exámenes.'; }
+  m.className = 'message ' + cls; m.querySelector('b').textContent = t; m.querySelector('p').textContent = p;
+
+  try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+}
+render();
+</script>
+</body>
+</html>
